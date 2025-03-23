@@ -15,7 +15,7 @@ class User:
 @strawberry.type
 class Query:
     @strawberry.field
-    def persons(self) -> List[User]:
+    def people(self) -> List[User]:
         query = "MATCH (u:User) RETURN u.id AS id, u.name AS name, u.age AS age"
         result = run_query(query)
         return [User(id=record["id"], name=record["name"], age=record["age"]) for record in result]
