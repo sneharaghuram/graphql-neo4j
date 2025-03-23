@@ -1,26 +1,19 @@
-import typing
 import strawberry
 
-@strawberry.type
-class Book:
-    title: str
-    author: str
+from fastapi import FastAPI
+from strawberry.fastapi import GraphQLRouter
 
-def get_books():
-    return [
-        Book(
-            title="The Great Gatsby",
-            author="F. Scott Fitzgerald",
-        ),
-        Book(
-            title="The God of Small Things",
-            author="Arundhatti Roy",
-        ),
-        
-    ]
 
 @strawberry.type
 class Query:
-    books: typing.List[Book] = strawberry.field(resolver=get_books)
+    @strawberry.field
+    def hello(self) -> str:
+        return "Hello World"
 
-schema = strawberry.Schema(query=Query)
+
+schema = strawberry.Schema(Query)
+
+graphql_app = GraphQLRouter(schema)
+
+app = FastAPI()
+app.include_router(graphql_app, prefix="/graphql")

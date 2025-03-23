@@ -1,4 +1,4 @@
 bin
 lib
 pyvenv*
-__pychache
+__pycache__/*
