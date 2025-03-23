@@ -2,9 +2,7 @@ import strawberry
 from fastapi import FastAPI
 from strawberry.fastapi import GraphQLRouter
 from typing import List
-
-# In-memory storage for users (for now)
-users_db = []
+from db import run_query
 
 # Step 1: Define a GraphQL User Type
 @strawberry.type
@@ -13,32 +11,37 @@ class User:
     name: str
     age: int
 
-# Step 2: Define the Query for Fetching Users
+# Step 2: Define Query to Fetch Users from Neo4j
 @strawberry.type
 class Query:
-    
     @strawberry.field
-    def users(self) -> List[User]:
-        return users_db  # Return users from in-memory DB
+    def persons(self) -> List[User]:
+        query = "MATCH (u:User) RETURN u.id AS id, u.name AS name, u.age AS age"
+        result = run_query(query)
+        return [User(id=record["id"], name=record["name"], age=record["age"]) for record in result]
 
-# Step 3: Define a Mutation to Add Users
+# Step 3: Define Mutation to Add Users to Neo4j
 @strawberry.type
 class Mutation:
     @strawberry.mutation
-    def add_user(self, name: str, age: int) -> User:
-        new_user = User(id=len(users_db) + 1, name=name, age=age)
-        users_db.append(new_user)  # Store in memory
-        return new_user
+    def add_user(self, name: str, age: int, id: int) -> User:
+        query = """
+        CREATE (u:User {id: $id, name: $name, age: $age})
+        RETURN u.id AS id, u.name AS name, u.age AS age
+        """
+        result = run_query(query, {"name": name, "age": age, "id": id})
+        record = result.single()
+        return User(id=record["id"], name=record["name"], age=record["age"])
 
-# Step 4: Create the GraphQL Schema
+# Step 4: Create GraphQL Schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 
 # Step 5: Set Up FastAPI with GraphQL
-graphql_app = GraphQLRouter(schema)
 app = FastAPI()
+graphql_app = GraphQLRouter(schema)
 app.include_router(graphql_app, prefix="/graphql")
 
-# # Step 6: Run the Server
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
+# Step 6: Run the Server
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
